@@ -29,7 +29,6 @@ router.post("/signup", (req, res, next) => {
     res.redirect('/userProfile');
 })
   .catch(error => next(error));
-  res.redirect('/userprofile');
 });
 
 router.get("/userprofile", (req, res, next) => {
