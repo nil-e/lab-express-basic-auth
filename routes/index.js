@@ -1,6 +1,6 @@
 const router = require("express").Router();
-const bcryptjs = require('bcryptjs');
-const User = require('../models/User.model');
+const bcryptjs = require("bcryptjs");
+const User = require("../models/User.model");
 const saltRounds = 10;
 
 /* GET home page */
@@ -13,23 +13,23 @@ router.get("/signup", (req, res, next) => {
 });
 
 router.post("/signup", (req, res, next) => {
-  console.log('The form data: ', req.body);
-   const { username, password } = req.body;
-  console.log('username', username, 'pwd', password);
+  console.log("The form data: ", req.body);
+  const { username, password } = req.body;
+  console.log("username", username, "pwd", password);
   bcryptjs
-  .genSalt(saltRounds)
-  .then(salt => bcryptjs.hash(password, salt))
-  .then(hashedPassword => {
-    return User.create({
-      username,
-      password: hashedPassword
-    });
-  })
-  .then(userFromDB => {
-    console.log('Newly created user is: ', userFromDB);
-    res.redirect('/userProfile');
-})
-  .catch(error => next(error));
+    .genSalt(saltRounds)
+    .then((salt) => bcryptjs.hash(password, salt))
+    .then((hashedPassword) => {
+      return User.create({
+        username,
+        password: hashedPassword,
+      });
+    })
+    .then((userFromDB) => {
+      console.log("Newly created user is: ", userFromDB);
+      res.redirect("/userProfile");
+    })
+    .catch((error) => next(error));
 });
 
 router.get("/userprofile", (req, res, next) => {
@@ -41,24 +41,25 @@ router.get("/login", (req, res, next) => {
 });
 
 router.post("/login", (req, res, next) => {
-  console.log('The form data: ', req.body);
-   const { username, password } = req.body;
-  console.log('username', username, 'pwd', password);
-  bcryptjs
-  .genSalt(saltRounds)
-  .then(salt => bcryptjs.hash(password, salt))
-  .then(hashedPassword => {
-    let userFound = User.find({
-      username: username,
-      passwordHash: hashedPassword
-    });
-    return console.log(userFound);
+  const { username, password } = req.body;
+  console.log({ username, password });
+    User.findOne({username: username})
+        .then((userFromDB) => {
+          if (!userFromDB) {
+            throw new Error("User not found");
+          }
+    return bcryptjs.compare(password, userFromDB.password);
   })
-  .then(userFromDB => {
-    console.log('We can log in:', userFromDB);
-    res.redirect('/userProfile');
-})
-  .catch(error => next(error));
+  .then((result) => {
+    if (result) {
+      console.log("Login successful");
+      res.redirect("/userProfile");
+      console.log("SESSION =====> ", req.session);
+    } else {
+      throw new Error("Invalid password");
+    }
+  })
+    .catch((error) => next(error));
 });
 
 module.exports = router;
