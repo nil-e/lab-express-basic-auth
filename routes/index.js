@@ -33,7 +33,8 @@ router.post("/signup", (req, res, next) => {
 });
 
 router.get("/userprofile", (req, res, next) => {
-  res.render("users/userprofile");
+  res.render('users/user-profile', 
+  { userInSession: req.session.currentUser });
 });
 
 router.get("/login", (req, res, next) => {
@@ -41,25 +42,31 @@ router.get("/login", (req, res, next) => {
 });
 
 router.post("/login", (req, res, next) => {
+  console.log("SESSION =====> ", req.session);
   const { username, password } = req.body;
   console.log({ username, password });
-    User.findOne({username: username})
-        .then((userFromDB) => {
-          if (!userFromDB) {
-            throw new Error("User not found");
-          }
-    return bcryptjs.compare(password, userFromDB.password);
-  })
-  .then((result) => {
-    if (result) {
-      console.log("Login successful");
-      res.redirect("/userProfile");
-      console.log("SESSION =====> ", req.session);
-    } else {
-      throw new Error("Invalid password");
-    }
-  })
+  User.findOne({ username: username })
+    .then((userFromDB) => {
+      if (!userFromDB) {
+        throw new Error("User not found");
+      } 
+      else if (bcryptjs.compare(password, userFromDB.password)) {
+        console.log("Login successful");
+        req.session.currentUser = userFromDB;
+        res.redirect("/userProfile");
+      } else {
+        throw new Error("Invalid password");
+      }
+    })
     .catch((error) => next(error));
+});
+
+//might need a review
+router.post('/logout', (req, res, next) => {
+  req.session.destroy(err => {
+    if (err) next(err);
+    res.redirect('/');
+  });
 });
 
 module.exports = router;
