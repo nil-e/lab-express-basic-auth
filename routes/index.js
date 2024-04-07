@@ -3,19 +3,25 @@ const bcryptjs = require("bcryptjs");
 const User = require("../models/User.model");
 const saltRounds = 10;
 
+const { isLoggedIn, isLoggedOut } = require('../middleware/route-guard.js');
+
 /* GET home page */
 router.get("/", (req, res, next) => {
   res.render("index");
 });
 
-router.get("/signup", (req, res, next) => {
+router.get("/signup", isLoggedOut, (req, res, next) => {
   res.render("auth/signup");
 });
 
-router.post("/signup", (req, res, next) => {
+router.post("/signup", isLoggedOut, (req, res, next) => {
   console.log("The form data: ", req.body);
   const { username, password } = req.body;
   console.log("username", username, "pwd", password);
+  if (!username || !password) {
+    throw new Error("Username and password cannot be empty!");
+  }
+
   bcryptjs
     .genSalt(saltRounds)
     .then((salt) => bcryptjs.hash(password, salt))
@@ -32,7 +38,7 @@ router.post("/signup", (req, res, next) => {
     .catch((error) => next(error));
 });
 
-router.get("/userprofile", (req, res, next) => {
+router.get("/userprofile",isLoggedIn, (req, res, next) => {
   res.render('users/user-profile', 
   { userInSession: req.session.currentUser });
 });
@@ -45,18 +51,29 @@ router.post("/login", (req, res, next) => {
   console.log("SESSION =====> ", req.session);
   const { username, password } = req.body;
   console.log({ username, password });
+  if (!username || !password) {
+    throw new Error("Username and password cannot be empty!");
+  }
   User.findOne({ username: username })
     .then((userFromDB) => {
       if (!userFromDB) {
         throw new Error("User not found");
       } 
-      else if (bcryptjs.compare(password, userFromDB.password)) {
-        console.log("Login successful");
+      else {
+        bcryptjs.compare(password, userFromDB.password, function(err, result) {
+          if (err){
+            throw new Error("Invalid password");
+          }
+          if (result) {
+            console.log("Login successful");
         req.session.currentUser = userFromDB;
         res.redirect("/userProfile");
-      } else {
-        throw new Error("Invalid password");
-      }
+          } else {
+            // response is OutgoingMessage object that server response http request
+            return res.json({success: false, message: 'passwords do not match'});
+          }
+      }); 
+      } 
     })
     .catch((error) => next(error));
 });
@@ -68,5 +85,14 @@ router.post('/logout', (req, res, next) => {
     res.redirect('/');
   });
 });
+
+router.get("/main", (req, res, next) => {
+  res.render("main");
+});
+
+router.get("/private",isLoggedIn, (req, res, next) => {
+  res.render("private");
+});
+
 
 module.exports = router;
